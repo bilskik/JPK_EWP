@@ -751,67 +751,67 @@ END;
 COMMIT;
 
 SELECT XMLELEMENT(
-    "JPK",
+    "tns:JPK",
     XMLELEMENT(
-        "Naglowek",
+        "tns:Naglowek",
         XMLFOREST(
-            KOD_FORMULARZA AS "KodFormularza",
-            WARIANT_FORMULARZA AS "WariantFormularza",
-            CEL_ZLOZENIA AS "CelZlozenia",
-            DATA_WYTWORZENIA_JPK AS "DataWytworzeniaJPK",
-            DATA_OD AS "DataOd",
-            DATA_DO AS "DataDo",
-            DOMYSLNY_KOD_WALUTY AS "DomyslnyKodWaluty",
-            KOD_URZEDU AS "KodUrzedu"
+            KOD_FORMULARZA AS "tns:KodFormularza",
+            WARIANT_FORMULARZA AS "tns:WariantFormularza",
+            CEL_ZLOZENIA AS "tns:CelZlozenia",
+            DATA_WYTWORZENIA_JPK AS "tns:DataWytworzeniaJPK",
+            DATA_OD AS "tns:DataOd",
+            DATA_DO AS "tns:DataDo",
+            DOMYSLNY_KOD_WALUTY AS "tns:DomyslnyKodWaluty",
+            KOD_URZEDU AS "tns:KodUrzedu"
         )
     ),
     XMLELEMENT(
-        "Podmiot1",
-        XMLELEMENT("IdentyfikatorPodmiotu",
+        "tns:Podmiot1",
+        XMLELEMENT("tns:IdentyfikatorPodmiotu",
             XMLFOREST(
-                NIP,
-                PELNA_NAZWA AS "PelnaNazwa"
+                NIP AS "tns:NIP",
+                PELNA_NAZWA AS "tns:PelnaNazwa"
             )
         ),
-        XMLELEMENT("AdresPodmiotu",
+        XMLELEMENT("tns:AdresPodmiotu",
             XMLFOREST(
-                KOD_KRAJU AS "KodKraju",
-                WOJEWODZTWO AS "Wojewodztwo",
-                POWIAT AS "Powiat",
-                GMINA AS "Gmina",
-                NR_DOMU AS "NrDomu",
-                MIEJSCOWOSC AS "Miejscowosc",
-                KOD_POCZTOWY AS "KodPocztowy"
+                KOD_KRAJU AS "tns:KodKraju",
+                WOJEWODZTWO AS "tns:Wojewodztwo",
+                POWIAT AS "tns:Powiat",
+                GMINA AS "tns:Gmina",
+                NR_DOMU AS "tns:NrDomu",
+                MIEJSCOWOSC AS "tns:Miejscowosc",
+                KOD_POCZTOWY AS "tns:KodPocztowy"
             )
         )
     ),
     XMLELEMENT(
-        "EWPWiersz",
+        "EWPWiersz" AS "tns:EWPWiersz",
         XMLFOREST(
-            K_1,
-            K_2,
-            K_3,
-            K_4,
-            K_5,
-            K_6,
-            K_7,
-            K_8,
-            K_9,
-            K_10,
-            K_11,
-            K_12,
-            K_13,
-            K_14
+            K_1 AS "tns:K_1",
+            K_2 AS "tns:K_2",
+            K_3 AS "tns:K_3",
+            K_4 AS "tns:K_4",
+            K_5 AS "tns:K_5",
+            K_6 AS "tns:K_6",
+            K_7 AS "tns:K_7",
+            K_8 AS "tns:K_8",
+            K_9 AS "tns:K_9",
+            K_10 AS "tns:K_10",
+            K_11 AS "tns:K_11",
+            K_12 AS "tns:K_12",
+            K_13 AS "tns:K_13",
+            K_14 AS "tns:K_14",
         )
     ),
     XMLELEMENT(
-        "EWPCtrl",
+        "EWPCtrl" AS "tns:EWPCtrl",
         XMLFOREST(
-            LICZBA_WIERSZY AS "LiczbaWierszy",
-            SUMA_PRZYCHODOW AS "SumaPrzychodow"
+            LICZBA_WIERSZY AS "tns:LiczbaWierszy",
+            SUMA_PRZYCHODOW AS "tns:SumaPrzychodow"
         )
     )
-) AS "JPK"
+) AS "tns:JPK"
 FROM NAGLOWEK N
 INNER JOIN (
     SELECT *
@@ -831,53 +831,53 @@ ON N.FK_EWP = E.PK_EWPWIERSZ;
 /*
 Output:
 
-<JPK>
-    <Naglowek>
-        <KodFormularza>1</KodFormularza>
-        <WariantFormularza>3</WariantFormularza>
-        <CelZlozenia>1</CelZlozenia>
-        <DataWytworzeniaJPK>2024/04/01</DataWytworzeniaJPK>
-        <DataOd>2023/03/01</DataOd>
-        <DataDo>2024/04/01</DataDo>
-        <DomyslnyKodWaluty>PLN</DomyslnyKodWaluty>
-        <KodUrzedu>6428</KodUrzedu>
-    </Naglowek>
-    <Podmiot1>
-        <IdentyfikatorPodmiotu>
-            <NIP>1234567891</NIP>
-            <PelnaNazwa>Budimex</PelnaNazwa>
-        </IdentyfikatorPodmiotu>
-        <AdresPodmiotu>
-            <KodKraju>PL</KodKraju>
-            <Wojewodztwo>LUB</Wojewodztwo>
-            <Powiat>radzyński</Powiat>
-            <Gmina>Radzyń Podlaski</Gmina>
-            <NrDomu>100</NrDomu>
-            <Miejscowosc>Radzyń Podlaski</Miejscowosc>
-            <KodPocztowy>21-300</KodPocztowy>
-        </AdresPodmiotu>
-    </Podmiot1>
-    <EWPWiersz>
-        <K_1>1</K_1>
-        <K_2>01/04/2024</K_2>
-        <K_3>01/04/2023</K_3>
-        <K_4>20000</K_4>
-        <K_5>8300</K_5>
-        <K_6>8500</K_6>
-        <K_7>8600</K_7>
-        <K_8>8750</K_8>
-        <K_9>8800</K_9>
-        <K_10>9000</K_10>
-        <K_11>9150</K_11>
-        <K_12>9450</K_12>
-        <K_13>9700</K_13>
-        <K_14>80250</K_14>
-    </EWPWiersz>
-     <EWPCtrl>
-         <LiczbaWierszy>10</LiczbaWierszy>
-         <SumaPrzychodow>80250</SumaPrzychodow>
-     </EWPCtrl>
- </JPK>
+<tns:JPK>
+    <tns:Naglowek>
+        <tns:KodFormularza>1</tns:KodFormularza>
+        <tns:WariantFormularza>3</tns:WariantFormularza>
+        <tns:CelZlozenia>1</tns:CelZlozenia>
+        <tns:DataWytworzeniaJPK>2024/04/01</tns:DataWytworzeniaJPK>
+        <tns:DataOd>2023/03/01</tns:DataOd>
+        <tns:DataDo>2024/04/01</tns:DataDo>
+        <tns:DomyslnyKodWaluty>PLN</tns:DomyslnyKodWaluty>
+        <tns:KodUrzedu>6428</tns:KodUrzedu>
+    </tns:Naglowek>
+    <tns:Podmiot1>
+        <tns:IdentyfikatorPodmiotu>
+            <tns:NIP>1234567891</tns:NIP>
+            <tns:PelnaNazwa>Budimex</tns:PelnaNazwa>
+        </tns:IdentyfikatorPodmiotu>
+        <tns:AdresPodmiotu>
+            <tns:KodKraju>PL</tns:KodKraju>
+            <tns:Wojewodztwo>LUB</tns:Wojewodztwo>
+            <tns:Powiat>radzyński</tns:Powiat>
+            <tns:Gmina>Radzyń Podlaski</tns:Gmina>
+            <tns:NrDomu>100</tns:NrDomu>
+            <tns:Miejscowosc>Radzyń Podlaski</tns:Miejscowosc>
+            <tns:KodPocztowy>21-300</tns:KodPocztowy>
+        </tns:AdresPodmiotu>
+    </tns:Podmiot1>
+    <tns:EWPWiersz>
+        <tns:K_1>1</tns:K_1>
+        <tns:K_2>01/04/2024</tns:K_2>
+        <tns:K_3>01/04/2023</tns:K_3>
+        <tns:K_4>20000</tns:K_4>
+        <tns:K_5>8300</tns:K_5>
+        <tns:K_6>8500</tns:K_6>
+        <tns:K_7>8600</tns:K_7>
+        <tns:K_8>8750</tns:K_8>
+        <tns:K_9>8800</tns:K_9>
+        <tns:K_10>9000</tns:K_10>
+        <tns:K_11>9150</tns:K_11>
+        <tns:K_12>9450</tns:K_12>
+        <tns:K_13>9700</tns:K_13>
+        <tns:K_14>80250</tns:K_14>
+    </tns:EWPWiersz>
+     <tns:EWPCtrl>
+         <tns:LiczbaWierszy>10</tns:LiczbaWierszy>
+         <tns:SumaPrzychodow>80250</tns:SumaPrzychodow>
+     </tns:EWPCtrl>
+ </tns:JPK>
  */
 
  /*
