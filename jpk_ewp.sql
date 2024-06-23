@@ -80,13 +80,13 @@ BEGIN
     IF IS_TABLE_EXIST = 0 THEN
         EXECUTE IMMEDIATE 'CREATE TABLE ADRES_PODMIOTU(
             PK_ADRES_PODMIOTU NUMBER GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
-            KOD_KRAJU NVARCHAR2(100) NOT NULL,
-            WOJEWODZTWO NVARCHAR2(100) NOT NULL,
-            POWIAT NVARCHAR2(100) NOT NULL,
-            GMINA NVARCHAR2(100) NOT NULL,
-            NR_DOMU NUMBER NOT NULL,
-            MIEJSCOWOSC NVARCHAR2(100) NOT NULL,
-            KOD_POCZTOWY NVARCHAR2(6) NOT NULL,
+            KOD_KRAJU nvarchar2(100) NOT NULL,
+            WOJEWODZTWO nvarchar2(100) NOT NULL,
+            POWIAT nvarchar2(100) NOT NULL,
+            GMINA nvarchar2(100) NOT NULL,
+            NR_DOMU number NOT NULL,
+            MIEJSCOWOSC nvarchar2(100) NOT NULL,
+            KOD_POCZTOWY nvarchar2(6) NOT NULL,
             PRIMARY KEY (PK_ADRES_PODMIOTU)
         )';
     END IF;
@@ -118,8 +118,8 @@ BEGIN
     IF IS_TABLE_EXIST = 0 THEN
         EXECUTE IMMEDIATE 'CREATE TABLE EWPCTRL(
             PK_EWPCTRL NUMBER GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
-            LICZBA_WIERSZY number,
-            SUMA_PRZYCHODOW number,
+            LICZBA_WIERSZY number NOT NULL,
+            SUMA_PRZYCHODOW number NOT NULL,
             PRIMARY KEY (PK_EWPCTRL)
         )';
     END IF;
@@ -190,7 +190,7 @@ BEGIN
     IF  IS_TABLE_EXIST = 0 THEN
         EXECUTE IMMEDIATE 'CREATE TABLE LOG(
                 PK_LOG NUMBER GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
-                OPIS NVARCHAR2(100),
+                DESCRIPTION NVARCHAR2(100),
                 DATE_TIME TIMESTAMP,
                 USER_NAME NVARCHAR2(20),
                 PRIMARY KEY (PK_LOG)
@@ -201,83 +201,68 @@ END;
 /*
     Function for table deletion
         @@input - table which we want to delete
-        @@return - 1 - if table found and deleted, 1 - if no operation was performed
+        @@return - 1 - if table found and deleted, 0- if no operation was performed
  */
-CREATE OR REPLACE FUNCTION DELETE_TABLE(DELETE_TABLE IN NVARCHAR2)
-RETURN NUMBER
+CREATE OR REPLACE PROCEDURE DELETE_TABLE(DELETE_TABLE_NAME IN VARCHAR2)
 AS
-    IS_TABLE_EXISTS NUMBER;
+    IS_TABLE_EXIST NUMBER;
 BEGIN
-    SELECT COUNT(*)
-    INTO IS_TABLE_EXISTS
-    FROM ALL_TABLES T
-    WHERE T.TABLE_NAME = DELETE_TABLE;
+    IS_TABLE_EXIST := CHECK_IF_TABLE_EXIST(DELETE_TABLE_NAME);
 
-    IF IS_TABLE_EXISTS > 0 THEN
-        EXECUTE IMMEDIATE 'DROP TABLE :DELETE_TABLE'
-        USING DELETE_TABLE;
+    IF IS_TABLE_EXIST > 0 THEN
+        EXECUTE IMMEDIATE 'DROP TABLE ' || DELETE_TABLE_NAME;
+        INSERT INTO LOG(DESCRIPTION, DATE_TIME, USER_NAME)
+            VALUES ('TABLE ' || DELETE_TABLE_NAME || ' deleted!', CURRENT_TIMESTAMP, USER);
     END IF;
-    RETURN IS_TABLE_EXISTS;
-END;
-
-
-/*
-    Procedure for normalizing date  -
-        converts dates in naglowek to one format
- */
-CREATE OR REPLACE PROCEDURE NORMALIZE_DATE AS
-    CURSOR NAGLOWEK_CURSOR IS SELECT * FROM TMP_NAGLOWEK;
-    CURSOR EWPWIERSZ_CURSOR IS SELECT * FROM TMP_EWPWIERSZ;
-    DATA_OD DATE;
-    DATA_DO DATE;
-    DATA_WYTWORZENIA_JPK DATE;
-    K_2 DATE;
-    K_3 DATE;
-BEGIN
-    FOR NAG IN NAGLOWEK_CURSOR
-    LOOP
-        DATA_WYTWORZENIA_JPK := DATE_CONVERTER(NAG.DATA_WYTWORZENIA_JPK);
-        DATA_OD := DATE_CONVERTER(NAG.DATA_OD);
-        DATA_DO := DATE_CONVERTER(NAG.DATA_DO);
-        UPDATE TMP_NAGLOWEK
-        SET DATA_WYTWORZENIA_JPK = DATA_WYTWORZENIA_JPK,
-            DATA_OD = DATA_OD, DATA_DO = DATA_DO;
-    END LOOP;
-
-    FOR WIERSZ IN EWPWIERSZ_CURSOR
-    LOOP
-        K_2 := DATE_CONVERTER(WIERSZ.K_2);
-        K_3 := DATE_CONVERTER(WIERSZ.K_3);
-        UPDATE TMP_EWPWIERSZ E
-        SET E.K_2 = K_2,
-            E.K_3 = K_3;
-    END LOOP;
 END;
 
 /*
  Date Converter
-    @@input - date which we want to convert to one specific format
-    @@output - yyyy/mm/dd
+    @@input - date which we want to convert to one specific format (YYYY MM DD)
+    @@output - yyyy-mm-dd
  */
 CREATE OR REPLACE FUNCTION DATE_CONVERTER(date_in in nvarchar2)
 RETURN DATE
 AS
+    DATE_OUT DATE;
     DATE_FORMAT_EXCEPTION EXCEPTION;
 BEGIN
-    IF date_in LIKE '%/%/%' THEN
-        RETURN TO_DATE(date_in, 'yyyy/mm/dd');
-    END IF;
-    IF date_in LIKE '%.%.%' THEN
-        RETURN TO_DATE(date_in, 'yyyy.mm.dd');
-    END IF;
 
-    RAISE DATE_FORMAT_EXCEPTION;
+    DATE_OUT := CASE
+        WHEN date_in LIKE '%/%/%' THEN TO_DATE(REPLACE(date_in, '/', ''),'YYYY-MM-DD')
+        WHEN date_in LIKE '%.%.%' THEN TO_DATE(REPLACE(date_in, '.', ''),'YYYY-MM-DD')
+        WHEN date_in LIKE '%-%-%' THEN TO_DATE(date_in, 'YYYY-MM-DD')
+        ELSE NULL
+    END;
+
+    RETURN DATE_OUT;
 
     EXCEPTION
         WHEN DATE_FORMAT_EXCEPTION THEN
             NULL;
             RETURN NULL;
 END;
+
+/*
+    Procedure for normalizing date  -
+        converts dates in naglowek, ewpwiersz to one format
+ */
+CREATE OR REPLACE PROCEDURE NORMALIZE_DATE
+AS
+BEGIN
+    UPDATE TMP_NAGLOWEK N
+        SET
+            N.DATA_WYTWORZENIA_JPK = DATE_CONVERTER(N.DATA_WYTWORZENIA_JPK),
+            N.DATA_OD = DATE_CONVERTER(N.DATA_OD),
+            N.DATA_DO = DATE_CONVERTER(N.DATA_DO);
+
+    UPDATE TMP_EWPWIERSZ EWP
+        SET
+            EWP.K_2 = DATE_CONVERTER(EWP.K_2),
+            EWP.K_3 = DATE_CONVERTER(EWP.K_3);
+END;
+
+
 
 /*
  Function for checking if curr_date > date_input
@@ -304,9 +289,12 @@ CREATE OR REPLACE PROCEDURE CHECK_NAGLOWEK AS
     IS_DATA_EXISTS NUMBER;
     IS_WARIANT_FORMULARZA_CORRECT NUMBER;
     IS_KOD_URZEDU_CORRECT NUMBER;
+    IS_DATE_NULL NUMBER;
     DATE_INCORRECTION_COUNTER NUMBER;
     DATA_FORMAT_EXCEPTION EXCEPTION;
+    DATE_EXCEPTION EXCEPTION;
 BEGIN
+
     /*
         Check if data exists
      */
@@ -318,6 +306,7 @@ BEGIN
         RAISE NO_DATA_FOUND;
     END IF;
 
+
     /*
         Check if WariantFormularza is equal to 3
      */
@@ -328,6 +317,26 @@ BEGIN
 
     IF IS_WARIANT_FORMULARZA_CORRECT != 0 THEN
         RAISE DATA_FORMAT_EXCEPTION;
+    END IF;
+
+    /*
+        Date normalization
+    */
+    NORMALIZE_DATE();
+
+    /*
+        Check if date_od date_do or data_wytworzenia_jpk is null after normalization
+     */
+    SELECT COUNT(*)
+    INTO IS_DATE_NULL
+    FROM TMP_NAGLOWEK
+    WHERE
+        DATA_OD IS NULL OR
+        DATA_DO IS NULL OR
+        DATA_WYTWORZENIA_JPK IS NULL;
+
+    IF IS_DATE_NULL > 0 THEN
+        RAISE DATE_EXCEPTION;
     END IF;
 
     /*
@@ -381,11 +390,14 @@ BEGIN
 
 EXCEPTION
     WHEN DATA_FORMAT_EXCEPTION THEN
-        INSERT INTO LOG(OPIS, DATE_TIME, USER_NAME)
+        INSERT INTO LOG(DESCRIPTION, DATE_TIME, USER_NAME)
         VALUES ('Error occured during processing naglowek! Invalid data!', CURRENT_TIMESTAMP, USER);
     WHEN NO_DATA_FOUND THEN
-        INSERT INTO LOG(OPIS, DATE_TIME, USER_NAME)
+        INSERT INTO LOG(DESCRIPTION, DATE_TIME, USER_NAME)
         VALUES ('No data provided!', CURRENT_TIMESTAMP, USER);
+    WHEN DATE_EXCEPTION THEN
+        INSERT INTO LOG(DESCRIPTION, DATE_TIME, USER_NAME)
+        VALUES ('Incorrect date format!', CURRENT_TIMESTAMP, USER);
 END;
 
 /*
@@ -417,7 +429,7 @@ BEGIN
 
     EXCEPTION
         WHEN DATA_FORMAT_EXCEPTION THEN
-            INSERT INTO LOG (OPIS, DATE_TIME, USER_NAME)
+            INSERT INTO LOG (DESCRIPTION, DATE_TIME, USER_NAME)
             VALUES ('Podmiot is invalid!', CURRENT_TIMESTAMP, USER);
 END;
 
@@ -426,11 +438,28 @@ END;
  */
 CREATE OR REPLACE PROCEDURE CHECK_EWPWIERSZ
 AS
+    IS_DATE_FORMAT_CORRECT NUMBER;
     K_1_DUPLICATES NUMBER;
     CURSOR EWP_WIERSZ_CURSOR IS SELECT * FROM TMP_EWPWIERSZ;
     K_14_CURR_SUM NUMBER;
     EWP_WIERSZ_DATA_ERROR EXCEPTION;
+    DATE_EXCEPTION EXCEPTION;
 BEGIN
+
+    /*
+        Check if date_format is correct after date normalization (during CHECK_NAGLOWEK)
+    */
+    SELECT COUNT(*)
+    INTO IS_DATE_FORMAT_CORRECT
+    FROM TMP_EWPWIERSZ
+    WHERE
+        K_2 IS NULL OR
+        K_3 IS NULL;
+
+    IF IS_DATE_FORMAT_CORRECT > 0 THEN
+        RAISE DATE_EXCEPTION;
+    END IF;
+
     /*
         Check if Liczba Porzadkowa is different for each record
      */
@@ -462,8 +491,11 @@ BEGIN
 
     EXCEPTION
         WHEN EWP_WIERSZ_DATA_ERROR THEN
-            INSERT INTO LOG(opis, date_time, user_name)
+            INSERT INTO LOG(DESCRIPTION, DATE_TIME, USER_NAME)
             VALUES ('Invalid EWP Wiersz!', CURRENT_TIMESTAMP, USER);
+        WHEN DATE_EXCEPTION THEN
+            INSERT INTO LOG(DESCRIPTION, DATE_TIME, USER_NAME)
+            VALUES ('Invalid date format!', CURRENT_TIMESTAMP, USER);
 END;
 
 
@@ -570,7 +602,7 @@ END;
 CREATE OR REPLACE TRIGGER ON_SUCCES_MIGRATION
 AFTER INSERT ON NAGLOWEK
 BEGIN
-    INSERT INTO LOG(opis, date_time, user_name)
+    INSERT INTO LOG(DESCRIPTION, DATE_TIME, USER_NAME)
     VALUES ('Data migrated succesfully!', CURRENT_TIMESTAMP , USER);
 END;
 
@@ -670,8 +702,8 @@ BEGIN
             XMLELEMENT(
                 "EWP_WIERSZ",
                 XMLFOREST(
-                    K_1 AS "K_1",
-                    K_2 AS "K_2",
+                    K_1,
+                    K_2,
                     K_3,
                     K_4,
                     K_5,
@@ -718,8 +750,9 @@ END;
  */
 INSERT INTO TMP_NAGLOWEK VALUES('1', '3', '1', '2024/04/01', '2023/03/01', '2024/04/01', 'PLN', '6428');
 INSERT INTO TMP_PODMIOT VALUES('1234567891','Budimex', 'PL', 'LUB', 'radzyński', 'Radzyń Podlaski', '100', 'Radzyń Podlaski', '21-300');
-INSERT INTO TMP_EWPWIERSZ VALUES(1, '01/04/2024', '01/04/2023', '20000', 8300, 8500, 8600, 8750, 8800, 9000, 9150, 9450, 9700, 80250);
+INSERT INTO TMP_EWPWIERSZ VALUES(1, '2024/04/01', '2024/04/03', '20000', 8300, 8500, 8600, 8750, 8800, 9000, 9150, 9450, 9700, 80250);
 INSERT INTO TMP_EWPCTRL VALUES(10, 80250);
+
 
 BEGIN
     CHECK_NAGLOWEK();
@@ -760,7 +793,7 @@ SELECT XMLELEMENT(
     "tns:JPK",
     XMLELEMENT(
         "tns:Naglowek",
-        XMLFOREST(
+         XMLFOREST(
             KOD_FORMULARZA AS "tns:KodFormularza",
             WARIANT_FORMULARZA AS "tns:WariantFormularza",
             CEL_ZLOZENIA AS "tns:CelZlozenia",
@@ -792,7 +825,7 @@ SELECT XMLELEMENT(
         )
     ),
     XMLELEMENT(
-        "EWPWiersz" AS "tns:EWPWiersz",
+        "tns:EWPWiersz",
         XMLFOREST(
             K_1 AS "tns:K_1",
             K_2 AS "tns:K_2",
@@ -807,17 +840,17 @@ SELECT XMLELEMENT(
             K_11 AS "tns:K_11",
             K_12 AS "tns:K_12",
             K_13 AS "tns:K_13",
-            K_14 AS "tns:K_14",
+            K_14 AS "tns:K_14"
         )
     ),
     XMLELEMENT(
-        "EWPCtrl" AS "tns:EWPCtrl",
+        "EWPCtrl",
         XMLFOREST(
             LICZBA_WIERSZY AS "tns:LiczbaWierszy",
             SUMA_PRZYCHODOW AS "tns:SumaPrzychodow"
         )
     )
-) AS "tns:JPK"
+) AS "JPK_EWP"
 FROM NAGLOWEK N
 INNER JOIN (
     SELECT *
@@ -839,7 +872,7 @@ Output:
 
 <tns:JPK>
     <tns:Naglowek>
-        <tns:KodFormularza kodSystemowy="JPK_FA (1)" wersjaSchemy="1-0">JPK_EWP</tns:KodFormularza>
+        <tns:KodFormularza>JPK_EWP</tns:KodFormularza>
         <tns:WariantFormularza>3</tns:WariantFormularza>
         <tns:CelZlozenia>1</tns:CelZlozenia>
         <tns:DataWytworzeniaJPK>2024/04/01</tns:DataWytworzeniaJPK>
